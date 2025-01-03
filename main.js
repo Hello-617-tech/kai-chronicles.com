@@ -140,7 +140,7 @@ window.addEventListener('keydown', (event) => {
         move = 'kick';
         loadModel();
         setTimeout(() => {
-            move = 'fight_idle';
+            move = 'Fight_idle';
             loadModel();
             setTimeout(() => {
                 move = 'idle';
@@ -164,7 +164,7 @@ window.addEventListener('keydown', (event) => {
         move = spellMapping[event.key].move;
         loadModel();
         setTimeout(() => {
-            move = 'fight_idle';
+            move = 'Fight_idle';
             loadModel();
             setTimeout(() => {
                 move = 'idle';
@@ -175,7 +175,7 @@ window.addEventListener('keydown', (event) => {
     }
 
     if (event.key === 'ArrowUp') {
-        move = 'run';
+        move = 'Run';
         loadModel();
         player.position.x += 5;
         console.log(player.position.x);
