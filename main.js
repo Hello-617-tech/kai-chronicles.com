@@ -65,8 +65,10 @@ let move = 'idle';
 let worldLoaded = false;
 function loadWorld(){
     glbLoader.setDRACOLoader(draco);
-    glbLoader.load('./src/field.glb', function (gltf) {
+    glbLoader.load('./src/world.glb', function (gltf) {
         if (!worldLoaded) {
+            gltf.scene.scale.set(100, 100, 100);
+            gltf.scene.position.y = 26.46;
             scene.add(gltf.scene);
             worldLoaded = true;
         }
@@ -94,7 +96,7 @@ function loadModel() {
             // Adjust position to keep feet on the ground
             const boundingBox = new THREE.Box3().setFromObject(object);
             const modelHeight = boundingBox.max.y - boundingBox.min.y;
-            object.position.y = -boundingBox.min.y; // Align the bottom of the model with y=0
+            object.position.y = boundingBox.min.y; // Align the bottom of the model with y=0
 
             scene.add(object);
 
@@ -129,8 +131,8 @@ window.addEventListener('keydown', (event) => {
         mode = mode === 'base' ? 'rage' : 'base';
         console.log('Mode changed to:', mode);
         // Reload the model with the new mode
-        loadWorld();
         loadModel();
+        loadWorld();
     }
 
     // Add functionality for spacebar to trigger kick animation
