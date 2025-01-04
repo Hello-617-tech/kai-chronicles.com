@@ -60,19 +60,15 @@ let player;
 // Variables for animation mode and movement
 let mode = 'base';
 let move = 'idle';
-
-// Flag to track if the world has been loaded
-let worldLoaded = false;
+let map;
 
 function loadWorld() {
     glbLoader.setDRACOLoader(draco);
     glbLoader.load('./src/world.glb', function (gltf) {
-        if (!worldLoaded) {
-            gltf.scene.scale.set(100, 100, 100);
-            gltf.scene.position.y = 26.46;
-            scene.add(gltf.scene);
-            worldLoaded = true;
-        }
+        map = gltf.scene;
+        gltf.scene.scale.set(100, 100, 100);
+        gltf.scene.position.y = 26.46;
+        scene.add(gltf.scene);
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
@@ -98,7 +94,6 @@ function loadModel(callback) {
             const boundingBox = new THREE.Box3().setFromObject(object);
             const modelHeight = boundingBox.max.y - boundingBox.min.y;
             object.position.y = boundingBox.min.y; // Align the bottom of the model with y=0
-
             scene.add(object);
 
             // Check for animations and play the first one
@@ -118,7 +113,7 @@ function loadModel(callback) {
             }
         },
         (xhr) => {
-            console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+            console.log((xhr.loaded / xhr.total) *  100 + '% loaded');
         },
         (error) => {
             console.error('Error loading FBX file:', error);
@@ -180,20 +175,6 @@ window.addEventListener('keydown', (event) => {
             }, spellMapping[event.key].duration);
         });
     }
-
-    if (event.key === 'ArrowUp') {
-        move = 'Run';
-        loadModel(() => {
-            player.position.x += 5;
-            console.log(player.position.x);
-            loadModel(() => {
-                setTimeout(() => {
-                    move = 'idle';
-                    loadModel(loadWorld);
-                }, 500);
-            });
-        });
-    }
 });
 
 // Handle window resizing
@@ -238,10 +219,24 @@ function showSplashScreen() {
 
 // Display splash screen on load
 showSplashScreen();
-
+let ltr = false;
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
+    addEventListener('keydown', (event)=>{
+        // Move Player
+        if(event.key === 'ArrowUp'){
+            map.position.z -= 0.001;
+        }
+        if(event.key === 'ArrowRight'){
+            player.rotation.y += 0.0001;
+            map.rotation.y += 0.0001;
+        }
+        if(event.key === 'ArrowLeft'){
+            player.rotation.y -= 0.0001;
+            map.rotation.y -= 0.0001;
+        }
+    })
 
     // Update the animation mixer
     if (mixer) {
