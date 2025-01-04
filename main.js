@@ -64,7 +64,6 @@ let move = 'idle';
 // Flag to track if the world has been loaded
 let worldLoaded = false;
 function loadWorld(){
-    glbLoader.setDRACOLoader(draco);
     glbLoader.load('./src/world.glb', function (gltf) {
         if (!worldLoaded) {
             gltf.scene.scale.set(100, 100, 100);
@@ -82,6 +81,7 @@ function loadWorld(){
 }
 loadWorld();
 function loadModel() {
+    fbxLoader.setDRACOLoader(draco);
     fbxLoader.load(
         './public/flame_boy/' + mode + '/' + move + '.fbx', // Dynamic file path
         (object) => {
