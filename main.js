@@ -63,7 +63,8 @@ let move = 'idle';
 
 // Flag to track if the world has been loaded
 let worldLoaded = false;
-function loadWorld(){
+
+function loadWorld() {
     glbLoader.setDRACOLoader(draco);
     glbLoader.load('./src/world.glb', function (gltf) {
         if (!worldLoaded) {
@@ -80,8 +81,8 @@ function loadWorld(){
         console.log(error);
     });
 }
-loadWorld();
-function loadModel() {
+
+function loadModel(callback) {
     fbxLoader.load(
         './public/flame_boy/' + mode + '/' + move + '.fbx', // Dynamic file path
         (object) => {
@@ -110,6 +111,11 @@ function loadModel() {
             } else {
                 console.log('No animations found in the FBX file.');
             }
+
+            // Call the callback function if provided
+            if (callback) {
+                callback();
+            }
         },
         (xhr) => {
             console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
@@ -120,8 +126,8 @@ function loadModel() {
     );
 }
 
-// Load the initial model
-loadModel();
+// Load the initial model and then the world
+loadModel(loadWorld);
 
 // Add an event listener for the Enter key
 window.addEventListener('keydown', (event) => {
@@ -130,24 +136,24 @@ window.addEventListener('keydown', (event) => {
         // Toggle mode between 'base' and 'rage'
         mode = mode === 'base' ? 'rage' : 'base';
         console.log('Mode changed to:', mode);
-        // Reload the model with the new mode
-        loadModel();
-        loadWorld();
+        // Reload the model with the new mode and then the world
+        loadModel(loadWorld);
     }
 
     // Add functionality for spacebar to trigger kick animation
     if (event.key === ' ') {
         move = 'kick';
-        loadModel();
-        setTimeout(() => {
-            move = 'Fight_idle';
-            loadModel();
+        loadModel(() => {
             setTimeout(() => {
-                move = 'idle';
-                loadModel();
-            }, 10000);
-        }, 1000);
-        loadWorld();
+                move = 'Fight_idle';
+                loadModel(() => {
+                    setTimeout(() => {
+                        move = 'idle';
+                        loadModel(loadWorld);
+                    }, 10000);
+                });
+            }, 1000);
+        });
     }
 
     // Additional actions for spells
@@ -162,29 +168,31 @@ window.addEventListener('keydown', (event) => {
 
     if (spellMapping[event.key]) {
         move = spellMapping[event.key].move;
-        loadModel();
-        setTimeout(() => {
-            move = 'Fight_idle';
-            loadModel();
+        loadModel(() => {
             setTimeout(() => {
-                move = 'idle';
-                loadModel();
-            }, 10000);
-        }, spellMapping[event.key].duration);
-        loadWorld();
+                move = 'Fight_idle';
+                loadModel(() => {
+                    setTimeout(() => {
+                        move = 'idle';
+                        loadModel(loadWorld);
+                    }, 10000);
+                });
+            }, spellMapping[event.key].duration);
+        });
     }
 
     if (event.key === 'ArrowUp') {
         move = 'Run';
-        loadModel();
-        player.position.x += 5;
-        console.log(player.position.x);
-        loadModel();
-        setTimeout(() => {
-            move = 'idle';
-            loadModel();
-        }, 500);
-        loadWorld();
+        loadModel(() => {
+            player.position.x += 5;
+            console.log(player.position.x);
+            loadModel(() => {
+                setTimeout(() => {
+                    move = 'idle';
+                    loadModel(loadWorld);
+                }, 500);
+            });
+        });
     }
 });
 
@@ -230,7 +238,6 @@ function showSplashScreen() {
 
 // Display splash screen on load
 showSplashScreen();
-
 
 // Animation loop
 function animate() {
