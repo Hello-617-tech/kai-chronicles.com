@@ -61,7 +61,114 @@ let player;
 let mode = 'base';
 let move = 'idle';
 let map;
+let front = true;
+let back = false;
+let left = false;
+let right = false;
 
+function setupJoystick() {
+    const joystickContainer = document.createElement('div');
+    joystickContainer.style.position = 'absolute';
+    joystickContainer.style.bottom = '20px';
+    joystickContainer.style.left = '20px';
+    joystickContainer.style.width = '150px';
+    joystickContainer.style.height = '150px';
+    document.body.appendChild(joystickContainer);
+
+    const joystick = nipplejs.create({
+        zone: joystickContainer,
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'white',
+    });
+
+    joystick.on('move', (evt, data) => {
+        if (data.angle) {
+            const direction = data.angle.degree;
+            const force = data.force;
+
+            // Calculate movement vector based on joystick direction
+            const moveSpeed = 0.5 * force;
+
+            if (direction >= 45 && direction <= 135) {
+                // Forward (now moves backward)
+                if(back){
+                    back = false;
+                    front = true;
+                    player.rotation.y += Math.PI
+                }else if(left){
+                    left = false;
+                    front = true;
+                    player.rotation.y -= Math.PI/2
+                }else if(right){
+                    right = false;
+                    front = true;
+                    player.rotation.y += Math.PI/2
+                }
+                mode = 'rage'
+                map.position.z -= Math.cos(map.rotation.y) * moveSpeed;
+                map.position.x -= Math.sin(map.rotation.y) * moveSpeed;
+            } else if (direction >= 225 && direction <= 315) {
+                // Backward (now moves forward)
+                if(front){
+                    front = false;
+                    back = true;
+                    player.rotation.y += Math.PI;
+                }else if(left){
+                    left = false;
+                    back = true;
+                    player.rotation.y += Math.PI/2;
+                }else if (right){
+                    right = false;
+                    back = true;
+                    player.rotation.y -= Math.PI/2;
+                }
+                map.position.z += Math.cos(map.rotation.y) * moveSpeed;
+                map.position.x += Math.sin(map.rotation.y) * moveSpeed;
+            }
+
+            if (direction > 135 && direction < 225) {
+                // Left (now moves right)
+                if(front){
+                    front = false;
+                    left =  true;
+                    player.rotation.y += Math.PI/2;
+                }else if(back){
+                    back = false;
+                    left =  true;
+                    player.rotation.y -= Math.PI/2;
+                }else if(right){
+                    right = false;
+                    left = true;
+                    player.rotation.y += Math.PI;
+                }
+                map.position.x -= Math.cos(map.rotation.y) * moveSpeed;
+                map.position.z += Math.sin(map.rotation.y) * moveSpeed;
+            } else if (direction > 315 || direction < 45) {
+                // Right (now moves left)
+                if(front){
+                    front = false;
+                    right = true;
+                    player.rotation.y -= Math.PI/2;
+                } else if(back){
+                    back = false;
+                    right = true;
+                    player.rotation.y += Math.PI/2;
+                } else if(left){
+                    left = false;
+                    right = true;
+                    player.rotation.y += Math.PI;
+                }
+                map.position.x += Math.cos(map.rotation.y) * moveSpeed;
+                map.position.z -= Math.sin(map.rotation.y) * moveSpeed;
+            }
+        }
+    });
+
+    joystick.on('end', () => {
+        // Stop movement when joystick is released
+    });
+}
 function loadWorld() {
     glbLoader.setDRACOLoader(draco);
     glbLoader.load('./src/world.glb', function (gltf) {
@@ -77,8 +184,7 @@ function loadWorld() {
         console.log(error);
     });
 }
-
-function loadModel(callback) {
+function loadModel(callback1, callback2) {
     fbxLoader.load(
         './public/flame_boy/' + mode + '/' + move + '.fbx', // Dynamic file path
         (object) => {
@@ -108,6 +214,48 @@ function loadModel(callback) {
             }
 
             // Call the callback function if provided
+            if (callback1) {
+                callback1();
+            }
+            if(callback2){
+                callback2();
+            }
+        },
+        (xhr) => {
+            console.log((xhr.loaded / xhr.total) *  100 + '% loaded');
+        },
+        (error) => {
+            console.error('Error loading FBX file:', error);
+        }
+    );
+}
+function loadEnemies() {
+    fbxLoader.load(
+        './public/water_girl/girl.fbx',
+        (object) => {
+
+            object.scale.set(0.01, 0.01, 0.01); // Scale the model if needed
+
+            // Adjust position to keep feet on the ground
+            const boundingBox = new THREE.Box3().setFromObject(object);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            object.rotation.y = Math.PI
+            object.position.y = -boundingBox.min.y - 0.98;
+            object.position.z = 2 // Align the bottom of the model with y=0
+            scene.add(object);
+
+            // Check for animations and play the first one
+            if (object.animations && object.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(object);
+
+                // Play the first animation clip
+                const action = mixer.clipAction(object.animations[0]);
+                action.play();
+            } else {
+                console.log('No animations found in the FBX file.');
+            }
+
+            // Call the callback function if provided
             if (callback) {
                 callback();
             }
@@ -120,10 +268,6 @@ function loadModel(callback) {
         }
     );
 }
-
-// Load the initial model and then the world
-loadModel(loadWorld);
-
 // Add an event listener for the Enter key
 window.addEventListener('keydown', (event) => {
     console.log(event.key);
@@ -132,7 +276,7 @@ window.addEventListener('keydown', (event) => {
         mode = mode === 'base' ? 'rage' : 'base';
         console.log('Mode changed to:', mode);
         // Reload the model with the new mode and then the world
-        loadModel(loadWorld);
+        loadModel(loadWorld, loadEnemies);
     }
 
     // Add functionality for spacebar to trigger kick animation
@@ -144,7 +288,7 @@ window.addEventListener('keydown', (event) => {
                 loadModel(() => {
                     setTimeout(() => {
                         move = 'idle';
-                        loadModel(loadWorld);
+                        loadModel(loadWorld, loadEnemies);
                     }, 10000);
                 });
             }, 1000);
@@ -169,7 +313,7 @@ window.addEventListener('keydown', (event) => {
                 loadModel(() => {
                     setTimeout(() => {
                         move = 'idle';
-                        loadModel(loadWorld);
+                        loadModel(loadWorld, loadEnemies);
                     }, 10000);
                 });
             }, spellMapping[event.key].duration);
@@ -253,5 +397,12 @@ function render() {
     renderer.render(scene, camera);
 }
 
-// Start the animation loop
-animate();
+
+// Initialize everything
+function initializeScene() {
+    setupJoystick();
+    loadModel(loadWorld, loadEnemies);
+    animate();
+}
+
+initializeScene();
